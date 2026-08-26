@@ -1,0 +1,119 @@
+name: CI/CD to Azure Kubernetes Service
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate and build container
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Check required application files
+        run: |
+          test -s index.html
+          test -s app.js
+          test -s style.css
+          test -s Dockerfile
+          node --check app.js
+
+      - name: Build container as a CI test
+        run: docker build --tag sit-to-stand:ci .
+
+  deploy:
+    name: Build, push and deploy
+    needs: validate
+    if: github.event_name != 'pull_request' && vars.AKS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Sign in to Azure without a stored password
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Request a short-lived ACR token
+        id: acr-token
+        shell: bash
+        run: |
+          ACR_TOKEN="$(az acr login --name '${{ vars.ACR_NAME }}' --expose-token --output tsv --query accessToken)"
+          echo "::add-mask::$ACR_TOKEN"
+          echo "token=$ACR_TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Sign in to Azure Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ vars.ACR_NAME }}.azurecr.io
+          username: 00000000-0000-0000-0000-000000000000
+          password: ${{ steps.acr-token.outputs.token }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push versioned container image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ vars.ACR_NAME }}.azurecr.io/sit-to-stand:${{ github.sha }}
+            ${{ vars.ACR_NAME }}.azurecr.io/sit-to-stand:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Connect the runner to AKS
+        uses: azure/aks-set-context@v5
+        with:
+          resource-group: ${{ vars.AZURE_RESOURCE_GROUP }}
+          cluster-name: ${{ vars.AKS_CLUSTER_NAME }}
+          admin: "true"
+
+      - name: Create the application namespace
+        run: kubectl apply -f k8s/namespace.yaml
+
+      - name: Insert the real registry name into the manifest
+        run: sed -i "s/YOUR_ACR_NAME/${{ vars.ACR_NAME }}/g" k8s/deployment.yaml
+
+      - name: Deploy to Kubernetes and check the rollout
+        uses: Azure/k8s-deploy@v7
+        with:
+          action: deploy
+          strategy: basic
+          namespace: sit-to-stand
+          manifests: |
+            k8s/deployment.yaml
+            k8s/service.yaml
+          images: |
+            ${{ vars.ACR_NAME }}.azurecr.io/sit-to-stand:${{ github.sha }}
+
+      - name: Add deployment information to the run summary
+        shell: bash
+        run: |
+          echo "## AKS deployment completed" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          kubectl get deployment,pods,service -n sit-to-stand >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,7 @@
+.git
+.github
+k8s
+DEPLOYMENT_GUIDE.md
+README.md
+*.zip
+.DS_Store

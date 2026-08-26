@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sit-to-Stand Lab — 30s Functional Strength Test</title>
+<meta name="description" content="A browser-based 30-second sit-to-stand test. Counts repetitions in real time using on-device pose detection — no video ever leaves your browser." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="grid-backdrop" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">∠</span>
+    <div class="brand-text">
+      <span class="brand-eyebrow">FUNCTIONAL ASSESSMENT</span>
+      <span class="brand-title">SIT-TO-STAND LAB</span>
+    </div>
+  </div>
+  <div class="topbar-meta">
+    <span class="meta-item"><span class="meta-dot" id="engineDot" aria-hidden="true"></span><span id="engineStatus">Engine idle</span></span>
+  </div>
+</header>
+
+<main class="stage">
+
+  <!-- ============ START SCREEN ============ -->
+  <section id="startScreen" class="panel-card start-card">
+    <span class="eyebrow">30-SECOND CHAIR STAND TEST</span>
+    <h1>Measure lower-body strength with your webcam.</h1>
+    <p class="lede">
+      Stand near a chair, facing the camera, with your full body in frame. Sit, then rise to
+      full standing, as many times as you can in 30 seconds. Everything runs on your device —
+      your camera feed is never uploaded or recorded.
+    </p>
+    <ul class="checklist">
+      <li><span class="check-glyph">01</span>Position your camera so your hips, knees and ankles are visible</li>
+      <li><span class="check-glyph">02</span>Sit upright, then stand fully to trigger a rep</li>
+      <li><span class="check-glyph">03</span>Raise a hand and hold for 2s any time to reset</li>
+    </ul>
+    <button id="startBtn" class="btn btn-primary">
+      <span class="btn-icon" aria-hidden="true">●</span> Enable camera &amp; begin
+    </button>
+    <p id="startError" class="error-text" role="alert" hidden></p>
+  </section>
+
+  <!-- ============ TEST SCREEN ============ -->
+  <section id="testScreen" class="test-layout" hidden>
+
+    <div class="camera-card">
+      <div class="camera-frame">
+        <video id="webcam" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+        <div class="camera-vignette" aria-hidden="true"></div>
+
+        <div class="camera-tag" id="detectionTag">
+          <span class="tag-dot"></span><span id="detectionText">SEARCHING…</span>
+        </div>
+
+        <div id="completeOverlay" class="complete-overlay" hidden>
+          <span class="eyebrow">TEST COMPLETE</span>
+          <span class="complete-count" id="finalCount">0</span>
+          <span class="complete-label">repetitions in 30 seconds</span>
+          <button id="restartFromComplete" class="btn btn-primary">Run again</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="console">
+
+      <div class="panel-card gauge-card">
+        <span class="card-label">Knee angle · goniometer</span>
+        <svg id="gauge" class="gauge" viewBox="0 0 220 130" aria-hidden="true">
+          <path d="M 15 115 A 95 95 0 0 1 76 25" class="gauge-band gauge-band-sit"></path>
+          <path d="M 76 25 A 95 95 0 0 1 144 25" class="gauge-band gauge-band-mid"></path>
+          <path d="M 144 25 A 95 95 0 0 1 205 115" class="gauge-band gauge-band-stand"></path>
+          <line id="needle" x1="110" y1="115" x2="110" y2="30" class="gauge-needle"></line>
+          <circle cx="110" cy="115" r="6" class="gauge-pivot"></circle>
+        </svg>
+        <div class="gauge-readout">
+          <span id="angleValue">—</span><span class="gauge-unit">°</span>
+        </div>
+        <div class="gauge-thresholds">
+          <span>&lt;110° sit</span><span>&gt;160° stand</span>
+        </div>
+      </div>
+
+      <div class="panel-card readout-card">
+        <div class="readout-row">
+          <span class="card-label">Time left</span>
+          <span id="timeValue" class="readout-value mono">00:30</span>
+        </div>
+        <div class="readout-row">
+          <span class="card-label">Repetitions</span>
+          <span id="countValue" class="readout-value mono accent">0</span>
+        </div>
+        <div class="readout-row">
+          <span class="card-label">State</span>
+          <span id="stageValue" class="readout-pill">READY</span>
+        </div>
+      </div>
+
+      <div class="panel-card gesture-card">
+        <span class="card-label">Hands-free reset</span>
+        <p id="gestureHint" class="gesture-hint">Raise a hand above your head to restart</p>
+        <div class="progress-track">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="console-actions">
+        <button id="restartBtn" class="btn btn-ghost">Restart <kbd>R</kbd></button>
+        <button id="stopBtn" class="btn btn-ghost">Stop camera <kbd>Q</kbd></button>
+      </div>
+
+    </aside>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <p>Pose detection runs locally in your browser via MediaPipe Pose Landmarker. No frames are ever sent to a server.</p>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

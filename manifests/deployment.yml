@@ -1,0 +1,19 @@
+apiVersion : apps/v1
+kind: Deployment
+metadata:
+  name: valeriesxwsittostandtracker 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: valeriesxwsittostandtracker
+  template:
+    metadata:
+      labels:
+        app: valeriesxwsittostandtracker 
+    spec:
+      containers:
+        - name: valeriesxwsittostandtracker 
+          image: valeriesxwpose2026.azurecr.io/valeriesxwsittostandtracker
+          ports:
+          - containerPort: 8080

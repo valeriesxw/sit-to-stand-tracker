@@ -33,6 +33,10 @@ stages:
     pool:
       vmImage: $(vmImageName)
     steps:
+    - script: |
+    npx --yes html-validate index.html
+  displayName: Validate HTML
+    steps:
     - task: Docker@2
       displayName: Build and push an image to container registry
       inputs:

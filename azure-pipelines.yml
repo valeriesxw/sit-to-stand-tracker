@@ -32,18 +32,22 @@ stages:
     displayName: Build
     pool:
       vmImage: $(vmImageName)
-                  steps:
+
+    steps:
     - script: |
         npx --yes html-validate index.html
       displayName: Validate HTML
- 
-    steps:
+
+    - script: |
+        node --check app.js
+      displayName: Validate JavaScript
+
     - task: Docker@2
       displayName: Build and push an image to container registry
       inputs:
         command: buildAndPush
         repository: $(imageRepository)
-        dockerfile: $(dockerfilePath)
+        Dockerfile: $(dockerfilePath)
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
           $(tag)
